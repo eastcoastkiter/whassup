@@ -22,6 +22,7 @@
 #include <QSpinBox>
 #include <QCheckBox>
 #include <QPixmap>
+#include <QMessageBox>
 
 #include "icons.h"
 
@@ -57,6 +58,7 @@ private:
         QSpinBox* ackMinuteDuration;
         QSpinBox* ackHourDuration;
         QCheckBox* ackAllServices;
+        Qt::SortOrder dateSortOrder;
 
 
 private slots:
@@ -65,6 +67,7 @@ private slots:
     void ackSubmitSlot();
     void sendNagiosHttp(QNetworkRequest, QByteArray);
          void slotReadyReadHttp();
+         void customSortByColumn(int);
 public slots:
     void setNagiosHostname(QString h) {nagioshostname=h;}
     void setTimezone(int t) {timezone=t;}

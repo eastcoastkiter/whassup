@@ -3,6 +3,7 @@
 
 #include <QEvent>
 #include <QApplication>
+#include <QMessageBox>
 
 
 // Just ignore close events and minimze

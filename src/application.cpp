@@ -6,7 +6,8 @@ ApplicationWindow::ApplicationWindow()
 {
 hide=false;
 aufbau=false;
-
+showWarnings="true";
+hideInputFilter=false;
 setWindowTitle("Whassup");
 
 
@@ -52,7 +53,7 @@ window = new QWidget(this);
 
         QMenu* fileMenu = menuBar()->addMenu(tr("&Datei"));
 
-        QAction* updateAction   = new QAction("&Update", window);
+        QAction* updateAction   = new QAction("&Refresh", window);
         updateAction->setShortcut(Qt::Key_Space);
             connect(updateAction, SIGNAL(triggered(bool)), this, SLOT(writeServiceSlot()));
         fileMenu->addAction(updateAction);
@@ -216,13 +217,16 @@ window = new QWidget(this);
         configgrid->addWidget(new QLabel("Port:", tabConfig),1,0);
         configgrid->addWidget(new QLabel("Refresh (Sec.):", tabConfig),2,0);
         configgrid->addWidget(new QLabel("Timezone (Hour):", tabConfig),3,0);
-        configgrid->addWidget(new QLabel("Log Time (Min.):", tabConfig),4,0);
-        configgrid->addWidget(new QLabel("DoubleClick URL:", tabConfig),5,0);
-        hostGroupLabel = new QLabel("Hostgroups:", tabConfig);
-        configgrid->addWidget(hostGroupLabel,6,0);
+        configgrid->addWidget(new QLabel("Timeformat:", tabConfig),4,0);
+        configgrid->addWidget(new QLabel("Log Time (Min.):", tabConfig),5,0);
+        configgrid->addWidget(new QLabel("DoubleClick URL:", tabConfig),6,0);
+        configgrid->addWidget(new QLabel("Filter:", tabConfig),7,0);
+ /*       hostGroupLabel = new QLabel("Hostgroups:", tabConfig);
+        configgrid->addWidget(hostGroupLabel,8,0);
         hostGroupLabel->setVisible(false);
-        configgrid->addWidget(new QLabel("Font:", tabConfig),7,0);
-        configgrid->addWidget(new QLabel("Configfile:", tabConfig),8,0);
+*/
+        configgrid->addWidget(new QLabel("Font:", tabConfig),9,0);
+        configgrid->addWidget(new QLabel("Configfile:", tabConfig),10,0);
 
         QRegExp rx("(\\w*|\\.|\\d*|\\-*)+");
         QValidator *hostnameValidator = new QRegExpValidator(rx, this);
@@ -246,19 +250,36 @@ window = new QWidget(this);
             inputTimezone->setValue(1);
         configgrid->addWidget(inputTimezone,3,1);
 
+        QRegExp tfrx("(d|M|y|h|H|m|s|z|:|/|-|\\s)+");
+        QValidator *timeFormatValidator = new QRegExpValidator(tfrx, this);
+        inputTimeFormat = new QLineEdit("dd-MM-yy HH:mm",tabConfig);
+            inputTimeFormat->setValidator(timeFormatValidator);
+        configgrid->addWidget(inputTimeFormat,4,1);
+
         inputLogTime = new QSpinBox(tabConfig);
             inputLogTime->setRange(0,60);
             inputLogTime->setValue(15);
-        configgrid->addWidget(inputLogTime,4,1);
+        configgrid->addWidget(inputLogTime,5,1);
 
         QString serviceURL="http://" + inputHostname->text() + "/nagios/cgi-bin/status.cgi?host=";
         inputServiceURL = new QLineEdit(serviceURL,tabConfig);
-        configgrid->addWidget(inputServiceURL,5,1);
+        configgrid->addWidget(inputServiceURL,6,1);
 
+        QGridLayout* configFilterGrid = new QGridLayout(tabDowntime);
+            inputFilter=new QLineEdit(tabConfig);
+            configFilterGrid->addWidget(inputFilter,0,0);
+
+            QPushButton* inputFilterButton = new QPushButton("..",tabConfig);
+                connect( inputFilterButton, SIGNAL( pressed()) , this, SLOT( inputFilterButtonPressed() ) );
+            configFilterGrid->addWidget(inputFilterButton,0,1);
+
+        configgrid->addItem(configFilterGrid,7,1);
+
+/* Not needed anymore since filters are possible now
         inputHostGroups=new QLineEdit(tabConfig);
-        configgrid->addWidget(inputHostGroups,6,1);
+        configgrid->addWidget(inputHostGroups,8,1);
         inputHostGroups->setVisible(false);
-
+*/
         QGridLayout* configFontGrid = new QGridLayout(tabDowntime);
 
             inputConfigFont = new QLineEdit("Segoe UI,9,-1,5,50,0,0,0,0,0",tabConfig);
@@ -269,7 +290,7 @@ window = new QWidget(this);
                 connect( inputFont, SIGNAL( pressed()) , this, SLOT( setTreeFont() ) );
             configFontGrid->addWidget(inputFont,0,1);
 
-        configgrid->addItem(configFontGrid,7,1);
+        configgrid->addItem(configFontGrid,9,1);
 
         QGridLayout* configFileGrid = new QGridLayout(tabDowntime);
             inputConfigStorage = new QLineEdit(QString(QDesktopServices::storageLocation(QDesktopServices::HomeLocation)+"/whassup.cfg"),tabConfig);
@@ -280,8 +301,14 @@ window = new QWidget(this);
                 connect( inputConfigFile, SIGNAL( pressed()) , this, SLOT( searchConfigFile() ) );
             configFileGrid->addWidget(inputConfigFile,0,1);
 
-        configgrid->addItem(configFileGrid,8,1);
+        configgrid->addItem(configFileGrid,10,1);
 
+        cb_showWarnings=new QCheckBox("Show warnings",tabConfig);
+            cb_showWarnings->setObjectName("cb_showWarnings");
+            cb_showWarnings->setChecked(false);
+            cb_showWarnings->setCheckable(false);
+            connect( cb_showWarnings, SIGNAL( stateChanged (int)) , this, SLOT( columnsStateChange(int) ) );
+        configgrid->addWidget(cb_showWarnings,11,1);
 
         /* headerLabelsService << "Hostname" << "Services" << "Status" << "Last Change" << "State Type" << "Acknowledged" << "Notification_enabled";
         headerLabelsService << "Plugin Output" << "Downtimes" << "Downtime Depth" << "host_state" << "host_state_type" << "host_acknowledged";
@@ -334,12 +361,13 @@ window = new QWidget(this);
 
         configgrid->addLayout(serviceTreeColumns,1,5,7,2);
 
+        configgrid->addItem(new QSpacerItem ( 100, 0, QSizePolicy::Fixed, QSizePolicy::Fixed ),10,2);
 
-         QPushButton* configSubmitButton = new QPushButton("Submit", tabConfig);
-            configgrid->addWidget(configSubmitButton,9,4);
+         QPushButton* configSubmitButton = new QPushButton("Save Config", tabConfig);
+            configgrid->addWidget(configSubmitButton,10,5);
             connect( configSubmitButton, SIGNAL( pressed()) , this, SLOT( configSubmitSlot() ) );
 
-        configgrid->addItem(new QSpacerItem ( 10, 10, QSizePolicy::Expanding, QSizePolicy::Expanding ),10,10);
+        configgrid->addItem(new QSpacerItem ( 10, 10, QSizePolicy::Expanding, QSizePolicy::Expanding ),11,11);
 
 
         iWidget = new InfoWidget("Loading", this, Qt::Tool);
@@ -359,13 +387,33 @@ window = new QWidget(this);
              connect(timer, SIGNAL(timeout()), this, SLOT(writeServiceSlot()));
              timer->start(100000);
 
-    bool goodconfig=loadConfig(QDesktopServices::storageLocation(QDesktopServices::HomeLocation)+"/whassup.cfg");
+             //Search for config in different locations
+             QString fileName;
+             if (QFile(QDesktopServices::storageLocation(QDesktopServices::HomeLocation)+"/whassup.cfg").exists())
+             {
+                    fileName=QDesktopServices::storageLocation(QDesktopServices::HomeLocation)+"/whassup.cfg";
+             }
+             else if (QFile(QDir::currentPath()+"/whassup.cfg").exists())
+             {
+                 fileName=QDir::currentPath()+"/whassup.cfg";
+             }
+             else
+             {
+                    QString estring="Could not load Config File whassup.cfg in \n" + QDesktopServices::storageLocation(QDesktopServices::HomeLocation)+ " or \n" +QDir::currentPath();
+                    QMessageBox::critical(this,"Could not find Config" ,estring );
+             }
+
+    bool goodconfig=loadConfig(fileName);
     if (goodconfig)
         configSubmitSlot();
     // fertich
     aufbau=true;
 
 
+}
+
+ApplicationWindow::~ApplicationWindow()
+{
 }
 
 void ApplicationWindow::systemTrayActivated(QSystemTrayIcon::ActivationReason reason)
@@ -377,15 +425,6 @@ void ApplicationWindow::systemTrayActivated(QSystemTrayIcon::ActivationReason re
         show();
     }
 }
-
-
-ApplicationWindow::~ApplicationWindow()
-{
-}
-
-
-/////////////////////////////////////////
-
 
 void ApplicationWindow::findItem()
 {
@@ -462,6 +501,7 @@ void ApplicationWindow::newIconExplanation()
     HelpWidget *helpWidget = new HelpWidget(this, Qt::Dialog);
     helpWidget->show();
 }
+
 void ApplicationWindow::inventarExpandSlot()
 {
     if (inventarExpandButton->text() == "Expand")
@@ -536,6 +576,7 @@ void ApplicationWindow::changeFilters(bool checked)
     if (downAction->isChecked())
         Filter+="Filter: scheduled_downtime_depth = 0\nFilter: host_scheduled_downtime_depth = 0\n";
 
+/*
     //add comma seperated hostgroup list
     if (!(inputHostGroups->text().isEmpty()))
     {
@@ -552,7 +593,7 @@ void ApplicationWindow::changeFilters(bool checked)
             Filter+="Or:" + QString("%1").arg(hostGroupList.size()) + "\n";
         }
     }
-
+*/
     //Filter: host_groups >= 010_HP_Server\nFilter: host_groups >= opitz-hosts\nOr:2\n
 
     writeServiceSlot();
@@ -573,7 +614,6 @@ void ApplicationWindow::inventarItemDoubleClicked ( QTreeWidgetItem * item, int 
 {
     QDesktopServices::openUrl(QUrl(QString(inputServiceURL->text() + item->text(0))));
 }
-
 
 void ApplicationWindow::configSubmitSlot()
 {
@@ -604,10 +644,10 @@ void ApplicationWindow::writeServiceSlot()
     serviceTree->clear();
 
     QString start="GET services\nColumns: host_name description state last_state_change state_type acknowledged notifications_enabled plugin_output downtimes scheduled_downtime_depth ";
-            start+="host_state host_state_type host_acknowledged host_downtimes host_scheduled_downtime_depth contacts host_groups last_check\n";
+            start+="host_state host_state_type host_acknowledged host_downtimes host_scheduled_downtime_depth contacts host_groups last_check last_state_change\n";
 
-    QString wS=start + Filter + "\n";
-    //qDebug() << write;
+    QString wS=start + Filter + getFilter();
+    qDebug() << wS;
 
     QDateTime dt = QDateTime::currentDateTime ();
     statusBar()->showMessage( "Updated on: " + dt.toString("hh:mm") );
@@ -622,6 +662,37 @@ void ApplicationWindow::writeServiceSlot()
 void ApplicationWindow::closeEvent( QCloseEvent* ce )
 {
         ce->accept();
+}
+
+/* hide
+void ApplicationWindow::hideEvent( QHideEvent* he )
+{
+    qApp->setQuitOnLastWindowClosed(false);
+     he->ignore();
+     show();
+
+    if (showWarnings == "true")
+    {
+
+        QMessageBox* msgBox = new QMessageBox(0 );
+        msgBox->setAttribute( Qt::WA_DeleteOnClose ); //makes sure the msgbox is deleted automatically when closed
+        msgBox->setStandardButtons( QMessageBox::Ok );
+        msgBox->setWindowTitle( tr("Close") );
+        msgBox->setText( "Whassup will not exit. It will only hide in SystemTray.\nUse File->Exit to close this application.\nDisable Show Warnings in Config Tab to disable this message." );
+        msgBox->setModal( false );
+        msgBox->exec();
+        msgBox->open( this, SLOT(msgBoxClosed()) );
+        she=he;
+    }
+
+  //&  he->accept();
+
+}
+*/
+
+void ApplicationWindow::msgBoxClosed()
+{
+    she->accept();
 }
 
 void ApplicationWindow::aktualisierungChanged(int time)
@@ -641,7 +712,6 @@ void ApplicationWindow::errorOccured(QString errorString)
         mbString += errorString;
     QMessageBox::critical(this,"Critical",mbString );
 }
-
 
 void ApplicationWindow::gotServiceData(QList<QStringList> listOfStringLists)
 {
@@ -674,11 +744,12 @@ void ApplicationWindow::gotServiceData(QList<QStringList> listOfStringLists)
 
             int epochSecs=(listOfStringLists.at(k).at(3).toInt());
                     QDateTime dt = QDateTime::fromString("01-01-70 00:00:00", "dd-MM-yy HH:mm:ss").addSecs(epochSecs+(3600*inputTimezone->value()));
-            Item->setText(3,dt.toString("HH:mm dd-MM-yy"));
+            //Item->setText(3,dt.toString("dd-MM-yy HH:mm"));
+            Item->setText(3,dt.toString(inputTimeFormat->text()));
 
             int epochLCSecs=(listOfStringLists.at(k).at(17).toInt());
                     QDateTime LCdt = QDateTime::fromString("01-01-70 00:00:00", "dd-MM-yy HH:mm:ss").addSecs(epochLCSecs+(3600*inputTimezone->value()));
-            Item->setText(17,LCdt.toString("HH:mm dd-MM-yy"));
+            Item->setText(17,LCdt.toString(inputTimeFormat->text()));
 
             if (hostList.size() > 0)
                 hostList.first()->addChild(Item);
@@ -705,6 +776,7 @@ void ApplicationWindow::gotServiceData(QList<QStringList> listOfStringLists)
 15 contacts
 16 host_groups
 17 last_check
+18 last_state_change
 */
 
               // lets do the color for hosts
@@ -789,7 +861,6 @@ void ApplicationWindow::gotServiceData(QList<QStringList> listOfStringLists)
 
 }
 
-
 void ApplicationWindow::inventarUpdateSlot()
 {
     inventarTree->clear();
@@ -847,7 +918,8 @@ void ApplicationWindow::currentTabChanged(int tab)
     }
     else if (tab==5)
     {
-        return;
+        wS="GET services\nColumns: description host_name host_groups\n\n";
+        Purpose="Config";
     }
 
     iWidget->showInfoMessage("Loading...");
@@ -881,6 +953,11 @@ void ApplicationWindow::receiveLiveStatusData(QString Purpose, QList<QStringList
     {
         gotServiceData(listOfStringLists);
     }
+    else if ( Purpose == "Config" )
+    {
+        gotConfigData(listOfStringLists);
+    }
+
 }
 
 void ApplicationWindow::gotLogData(QList<QStringList> listOfStringLists)
@@ -947,7 +1024,6 @@ void ApplicationWindow::gotLogData(QList<QStringList> listOfStringLists)
   //  logTree->sortByColumn(0,Qt::DescendingOrder);
 }
 
-
 void ApplicationWindow::gotHostgroupData(QList<QStringList> listOfStringLists)
 {
     hostgroupTree->clear();
@@ -994,7 +1070,6 @@ void ApplicationWindow::gotHostgroupData(QList<QStringList> listOfStringLists)
         //downtimeTree->expandAll ();
 }
 
-
 void ApplicationWindow::gotInventarData(QList<QStringList> listOfStringLists)
 {
     inventarTree->clear();
@@ -1028,7 +1103,6 @@ void ApplicationWindow::gotInventarData(QList<QStringList> listOfStringLists)
     inventarTree->sortByColumn(0,Qt::AscendingOrder);
     inventarTree->setSortingEnabled (true);
 }
-
 
 void ApplicationWindow::gotDowntimeData(QList<QStringList> listOfStringLists)
 {
@@ -1065,19 +1139,42 @@ void ApplicationWindow::gotDowntimeData(QList<QStringList> listOfStringLists)
     //downtimeTree->expandAll ();
 }
 
+void ApplicationWindow::gotConfigData(QList<QStringList> listOfStringLists)
+{
+//These QStringLists could be used to create selectors/choosers
+        for (int k = 0; k < listOfStringLists.size()-1; ++k)
+        {
+            configServiceList << listOfStringLists.at(k).at(0);
+            configHostList << listOfStringLists.at(k).at(1);
+            QStringList tmpHostgroupList = listOfStringLists.at(k).at(2).split(",");
+            configHostgroupList << tmpHostgroupList;
+        }
+        qDebug() << "configServiceList" << configServiceList;
+
+        configServiceList.sort();
+        configServiceList.removeDuplicates();
+
+        configHostList.sort();
+        configHostList.removeDuplicates();
+
+        configHostgroupList.sort();
+        configHostgroupList.removeDuplicates();
+}
+
 void ApplicationWindow::aboutslot()
 {
     QString abouttext;
     abouttext ="Whassup\n";
-    abouttext+="Version 0.6 Beta (02/2012)\n";
+    abouttext+="Version 0.8 Beta (02/2012)\n";
     abouttext+="\n\n";
     abouttext+="mailto:Web@ReneStorm.de for questions or comments\n";
-    abouttext+="Copyright 2011 by Rene Storm\n";
+    abouttext+="Copyright 2011/12/13 by Rene Storm\n";
+    abouttext+="License GPLv2\n";
     abouttext+="BDR 529\n";
             QMessageBox::about(this,"About",abouttext );
     okAction->setVisible(true);
     hostGroupLabel->setVisible(true);
-    inputHostGroups->setVisible(true);
+    //inputHostGroups->setVisible(true);
 }
 
 void ApplicationWindow::writeConfig()
@@ -1093,9 +1190,10 @@ void ApplicationWindow::writeConfig()
         out << "port=" << QString("%1").arg(inputPort->value()) << "\n";
         out << "aktualisierung=" << QString("%1").arg(inputAktualisierung->value()) << "\n";
         out << "timezone=" << QString("%1").arg(inputTimezone->value()) << "\n";
+        out << "timeformat=" << inputTimeFormat->text() << "\n";
         out << "serviceURL=" << inputServiceURL->text() << "\n";
         out << "font=" << serviceTree->font().toString() << "\n";
-        out << "hostgroups=" << inputHostGroups->text() << "\n";
+//        out << "hostgroups=" << inputHostGroups->text() << "\n";
         if (ackAction->isChecked())
             out << "acknowledged=1\n";
         else
@@ -1114,7 +1212,8 @@ void ApplicationWindow::writeConfig()
             out << "hardstate=0\n";
 
         out << "columnInt=" << QString("%1").arg(globalColumnInt) << "\n";
-
+        out << "showWarnings=" << showWarnings << "\n";
+        out << "filter=" << inputFilter->text() << "\n";
 }
 
 bool ApplicationWindow::loadConfig(QString FileName)
@@ -1151,6 +1250,10 @@ bool ApplicationWindow::loadConfig(QString FileName)
                  {
                     inputTimezone->setValue( (line.split('='))[1].toInt() );
                  }
+                 else if (line.startsWith("timeformat="))
+                 {
+                     inputTimeFormat->setText((line.split('='))[1]);
+                 }
                  else if (line.startsWith("serviceURL="))
                  {                     
                      int g = line.indexOf ("=");
@@ -1160,10 +1263,10 @@ bool ApplicationWindow::loadConfig(QString FileName)
                  {
                     inputConfigFont->setText( (line.split('='))[1] );
                  }
-                 else if (line.startsWith("hostgroups="))
+/*                 else if (line.startsWith("hostgroups="))
                  {
                     inputHostGroups->setText( (line.split('='))[1] );
-                 }
+                 }*/
                  else if (line.startsWith("acknowledged="))
                  {
                     if (line.split('=')[1] == "1")
@@ -1208,11 +1311,28 @@ bool ApplicationWindow::loadConfig(QString FileName)
                         stateAction->setChecked ( false );
                     }
                  }
-                else if (line.startsWith("columnInt="))
-                {
-                    globalColumnInt=line.split('=')[1].toInt();
-                    setCheckBoxes(globalColumnInt);
-                }
+                 else if (line.startsWith("columnInt="))
+                 {
+                     globalColumnInt=line.split('=')[1].toInt();
+                     setCheckBoxes(globalColumnInt);
+                 }
+                 else if (line.startsWith("showWarnings="))
+                 {
+                     showWarnings=line.split('=')[1];
+                     if (showWarnings == "false")
+                     {
+                        cb_showWarnings->setChecked(false);
+                     }
+                     else
+                     {
+                         cb_showWarnings->setChecked(true);
+                     }
+                 }
+                 else if (line.startsWith("filter="))
+                 {
+                     QString f=line.remove("filter=");
+                        inputFilter->setText(f);
+                 }
 
 
 
@@ -1239,51 +1359,6 @@ QPixmap ApplicationWindow::drawSystemTrayIcon(QString text)
     return pixmap;
 }
 
-void ApplicationWindow::showHostgroupPopup(const QPoint & iPosition)
-{
-    lastHostgroupRightClickedItem = 0 ;
-      lastHostgroupRightClickedItem = hostgroupTree->itemAt(iPosition) ;
-      if ( 0 == lastHostgroupRightClickedItem )
-      {
-        qDebug() << "No item selected" ;
-      }
-      else
-      {
-        qDebug() << "Item clicked" + lastHostgroupRightClickedItem->text(0);
-        QMenu menu(this);
-        QMenu* hgMenu = new QMenu(this);
-        hgMenu->setTitle("&Hostgroups");
-
-        QAction *addHgRightAction   = new QAction("&add to Hostgrouplist", this);
-            addHgRightAction->setObjectName("addHG");
-               connect(addHgRightAction, SIGNAL(triggered(bool)), this, SLOT(hgMenuRightSlot(bool)));
-        hgMenu->addAction(addHgRightAction);
-        QAction *removeHgRightAction   = new QAction("&remove from Hostgrouplist", this);
-            removeHgRightAction->setObjectName("removeHG");
-            removeHgRightAction->setEnabled(false);
-                //connect(removeHgRightAction, SIGNAL(triggered(bool)), this, SLOT(hgMenuRightSlot(bool)));
-        hgMenu->addAction(removeHgRightAction);
-
-        menu.addMenu(hgMenu);
-        menu.exec(mapToGlobal(iPosition));
-
-    }
-}
-
-
-void ApplicationWindow::hgMenuRightSlot(bool on)
-{
-
-    if (sender()->objectName() == "addHG")
-    {
-        QString text=inputHostGroups->text();
-        if (text.isEmpty())
-            inputHostGroups->setText(lastHostgroupRightClickedItem->text(0));
-        else
-            inputHostGroups->setText(text + "," + lastHostgroupRightClickedItem->text(0));
-    }
-    statusBar()->showMessage( "Pease submit your configuration" );
-}
 
 void ApplicationWindow::columnsStateChange(int)
 {
@@ -1304,6 +1379,15 @@ void ApplicationWindow::columnsStateChange(int)
         columnInt=columnInt+64;
     if (cb_last_check->isChecked())
         columnInt=columnInt+128;
+
+    if (cb_showWarnings->isChecked())
+    {
+        showWarnings="true";
+    }
+    else
+    {
+        showWarnings="false";
+    }
 
     qDebug() << "columnsStateChange" << columnInt;
     globalColumnInt=columnInt;
@@ -1345,5 +1429,46 @@ void ApplicationWindow::setCheckBoxes(int columnInt)
      //last_check
      if (columnInt & 128)
         cb_last_check->setChecked(true);
+}
 
+QString ApplicationWindow::getFilter()
+{
+    QString Filter;
+    if (!inputFilter->text().trimmed().isEmpty())
+    {
+        QStringList FilterSplit=inputFilter->text().split(',');
+        for (int i = 0; i < FilterSplit.size(); ++i)
+        {
+            if (!( (FilterSplit.at(i).trimmed().startsWith("And")) || (FilterSplit.at(i).trimmed().startsWith("Or")) ) )
+            {
+                Filter=Filter + "Filter: " + FilterSplit.at(i).trimmed() + "\n";
+            }
+            else
+            {
+                Filter=Filter + FilterSplit.at(i).trimmed() + "\n";
+            }
+        }
+        qDebug() << "Filter" << Filter;
+        //Filter="Filter: description != 100_WINDOWS-hosts\n";
+
+    }
+    return Filter;
+}
+
+void ApplicationWindow::inputFilterButtonPressed()
+{
+    if (!hideInputFilter)
+    {
+    filterWidget = new FilterWidget(inputFilter->text(),configServiceList, configHostList, configHostgroupList,this, Qt::Dialog);
+        connect( filterWidget, SIGNAL( gotNewFilter(QString)) , this, SLOT( gotNewFilter(QString)) );
+        hideInputFilter=true;
+    }
+    filterWidget->show();
+}
+
+void ApplicationWindow::gotNewFilter(QString newFilter)
+{
+    qDebug() << newFilter;
+        inputFilter->setText(newFilter);
+        filterWidget->hide();
 }

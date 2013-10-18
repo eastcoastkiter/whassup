@@ -3,14 +3,16 @@ HEADERS       = application.h \
                 livesocket.h \
                 helpwidget.h \
                 infoWidget.h \
-    closeEvent.h
+                closeEvent.h \
+    filterwidget.h
 
 SOURCES       = application.cpp \
                 helpwidget.cpp \
                 livesocket.cpp \
                 servicetree.cpp \
                 infoWidget.cpp \
-                main.cpp
+                main.cpp \
+    filterwidget.cpp
 
 CODECFORTR    = ISO-8859-1
 RESOURCES     += application.qrc
@@ -30,6 +32,10 @@ DEFINES += QT_STATIC_BUILD
 OTHER_FILES += \
     README.txt \
     whassup_server.pl
+
+
+
+
 
 
 

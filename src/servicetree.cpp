@@ -4,23 +4,67 @@ using namespace std;
 ServiceTree::ServiceTree(QWidget * parent): QTreeWidget( parent )
 {
 
+    Qt::SortOrder dateSortOrder= Qt::DescendingOrder;
+
     setColumnCount(17);
     setContextMenuPolicy(Qt::CustomContextMenu);
     header()->setResizeMode(QHeaderView::ResizeToContents);
     QStringList headerLabelsService;
         headerLabelsService << "Hostname" << "Services" << "Status" << "Last Change" << "State Type" << "Acknowledged" << "Notification_enabled";
         headerLabelsService << "Plugin Output" << "Downtimes" << "Downtime Depth" << "host_state" << "host_state_type" << "host_acknowledged";
-        headerLabelsService << "host_downtimes" << "host_scheduled_downtime_depth"  << "contacts" << "host_groups" << "last_check";
+        headerLabelsService << "host_downtimes" << "host_scheduled_downtime_depth"  << "contacts" << "host_groups" << "last_check" << "last_state_change";
 
         setHeaderLabels(headerLabelsService);
     setSortingEnabled (false);
 
 
         connect(this, SIGNAL(customContextMenuRequested ( const QPoint & )), this, SLOT(showServicePopup(const QPoint &)));
+        connect(header(), SIGNAL(sectionClicked(int)), this, SLOT(customSortByColumn(int)));
 }
 
 ServiceTree::~ServiceTree()
 {
+}
+
+void ServiceTree::customSortByColumn(int column)
+{
+    //setSortingEnabled (false);
+
+    //header()->showSortIndicator(true);
+    // here you can get the order
+    Qt::SortOrder order = header()->sortIndicatorOrder();
+    //
+
+    // and sort the items
+    if ( (column == 3)  || (header()->sortIndicatorSection () == 18 ) )
+    {
+        setSortingEnabled (false);
+
+        if (dateSortOrder == Qt::AscendingOrder)
+        {
+             dateSortOrder = Qt::DescendingOrder;
+        }
+        else
+        {
+             dateSortOrder = Qt::AscendingOrder;
+        }
+
+        //QMessageBox::information(this,"col", QString("Col: %1").arg(column) + QString(" currentorder:%1").arg(header()->sortIndicatorOrder()) + QString(" dateSortOrder:%1").arg(dateSortOrder) + QString(" section:%1").arg(header()->sortIndicatorSection ()));
+        sortItems(18, dateSortOrder);
+        //header()->setSortIndicator ( 18, dateSortOrder );
+    }
+    else
+    {
+        //header()->setSortIndicator ( column, order );
+        sortItems(column, order);
+    }
+
+   // to get more control over actual sorting of items,
+    // reimplement QTreeWidgetItem::operator<()
+
+
+ setSortingEnabled (true);
+
 }
 
 void ServiceTree::showServicePopup(const QPoint &iPosition)

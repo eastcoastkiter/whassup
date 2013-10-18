@@ -11,10 +11,11 @@ int main( int argc, char ** argv ) {
         window.installEventFilter(new myEventFilter());
 
     ApplicationWindow *mw = new ApplicationWindow();
+
     QIcon mwIcon(":/ok.png");
         mw->setWindowIcon(mwIcon);
         mw->show();
 
-    window.connect( &window, SIGNAL(lastWindowClosed()), &window, SLOT(quit()) );
+        window.connect( &window, SIGNAL(lastWindowClosed()), &window, SLOT(quit()) );
     return window.exec();
 }

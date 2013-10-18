@@ -1,12 +1,12 @@
 
 Whassup is a Monitoring Frontend.
 
-License: GPL
-Author Rene Storm 2011
-Version: 0.8
+License: GPLv2
+Author Rene Storm 2011/12/13
+Version: 0.9
 
 Requirements:
-nagios/Incinga etc.
+Monitoring Tool.
 Livestatus (don't have it, get it)
 
 Installation:
@@ -19,3 +19,10 @@ On some systems administrativ rigths may be nessessary.
 Have fun,
 Rene
 
+Questions?
+Send an Email to whassup - ReneStorm.de
+
+
+Changelog:
+Version 0.9
+-Added Filter-Browser in ConfigTab

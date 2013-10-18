@@ -4,6 +4,7 @@
 #include <QAction>
 #include <QApplication>
 #include <QCloseEvent>
+#include <QHideEvent>
 #include <QDateTime>
 #include <QDebug>
 #include <QDesktopServices>
@@ -47,6 +48,7 @@
 #include "helpwidget.h"
 #include "servicetree.h"
 #include "infoWidget.h"
+#include "filterwidget.h"
 
 /*
  TODO:
@@ -68,7 +70,7 @@ public:
         int Port;
 protected:
     void closeEvent(QCloseEvent*);
-
+  //  void hideEvent(QHideEvent*);
 private slots:
      void aboutslot();
      void gotServiceData(QList<QStringList> listOfStringLists);
@@ -76,6 +78,7 @@ private slots:
      void gotLogData(QList<QStringList> listOfStringLists);
      void gotHostgroupData(QList<QStringList> listOfStringLists);
      void gotInventarData(QList<QStringList> listOfStringLists);
+     void gotConfigData(QList<QStringList> listOfStringLists);
      void receiveLiveStatusData(QString, QList<QStringList>);
      void writeServiceSlot();
      void errorOccured(QString);
@@ -97,10 +100,12 @@ private slots:
      void inventarUpdateSlot();
      void systemTrayActivated(QSystemTrayIcon::ActivationReason reason);
      QPixmap drawSystemTrayIcon(QString);
-     void showHostgroupPopup(const QPoint &);
-     void hgMenuRightSlot(bool);
      void columnsStateChange(int);
      void setCheckBoxes(int);
+     void msgBoxClosed();
+     QString getFilter();
+     void inputFilterButtonPressed();
+     void gotNewFilter(QString);
 
 public slots:
      void setStatusBar(QString message){statusBar()->showMessage( message);}
@@ -115,11 +120,13 @@ private:
         QLineEdit* inputServiceURL;
         QLineEdit* inputConfigStorage;
         QLineEdit* inputConfigFont;
-        QLineEdit* inputHostGroups;
+     //   QLineEdit* inputHostGroups;
         QSpinBox* inputPort;
         QSpinBox* inputAktualisierung;
         QSpinBox* inputTimezone;
+        QLineEdit* inputTimeFormat;
         QSpinBox* inputLogTime;
+        QLineEdit* inputFilter;
         QTimer *timer;
         bool hide, aufbau;
         QTabWidget* TabWidget;
@@ -155,5 +162,13 @@ private:
         QCheckBox *cb_last_check;
         int globalColumnInt;
         QLabel* hostGroupLabel;
+        QString showWarnings;
+        QCheckBox *cb_showWarnings;
+        QHideEvent *she;
+        FilterWidget * filterWidget;
+        QStringList configServiceList;
+        QStringList configHostList;
+        QStringList configHostgroupList;
+        bool hideInputFilter;
 };
 #endif
