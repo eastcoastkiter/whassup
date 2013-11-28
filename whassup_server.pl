@@ -7,7 +7,7 @@ use warnings;
 use strict;
 
 my $server_port = 6557;
-my $livestatus_socket = "/usr/local/nagios/var/rw/live";
+my $livestatus_socket = "/var/nagios/var/rw/live";
 
 
 my $server = IO::Socket::INET->new(LocalPort => $server_port,
@@ -20,7 +20,6 @@ while (my $client = $server->accept()) {
    #print Dumper($client) . "is the new connection\n";
         my $client_data;
         $client->recv($client_data,10000);
-#       print "Client Data: $client_data\n";
 
         my $iosocket = IO::Socket::UNIX->new(Peer => $livestatus_socket,
                                                 Type     => SOCK_STREAM,

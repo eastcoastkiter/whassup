@@ -1,24 +1,32 @@
 #include "livesocket.h"
 using namespace std;
 
-LiveSocket::LiveSocket(QString Purpose, QString Hostname, int Port, QString Command, QObject * parent ): QTcpSocket( parent )
+LiveSocket::LiveSocket(QString Purpose, QString Format, QString Hostname, int Port, QString Command, QObject * parent ): QTcpSocket( parent )
 {
+    h=Hostname;
+    p=Port;
+   // c="auth line from whassup\n" + Command;
+    c=Command;
     storedPurpose=Purpose;
-
+    OutputFormat=Format;
     connect( this, SIGNAL( readyRead() ) , this, SLOT( readyReadLiveStatus() ) );
     connect( this, SIGNAL( stateChanged(QAbstractSocket::SocketState)) , this, SLOT(stateChangedLiveStatus(QAbstractSocket::SocketState) ) );
+}
 
-    connectToHost(Hostname, Port);
+
+void LiveSocket::connectLiveSocket()
+{
+    connectToHost(h, p);
 
         if ( !waitForConnected(3000) )
         {
-            qDebug("Unable to connect To Server!\n");
-            emit errorLiveSocket(errorString());
+            qDebug() << "Unable to connect To Server" << errorString();
+            emit errorLiveSocket(QString(errorString()),2);
         }
         else
         {
-            qDebug("Connection OK\n");
-            write (Command.toLatin1());
+            qDebug() << "Connection OK\n" << c.toLatin1();
+            write (c.toLatin1());
         }
 }
 
@@ -40,8 +48,42 @@ void LiveSocket::readyReadLiveStatus()
 void LiveSocket::stateChangedLiveStatus(QAbstractSocket::SocketState state)
 {
     qDebug() << state;
+    if (storedPurpose.toLower() == "command")
+    {
+        qDebug()<< "Not waiting for Command return";
+        return;
+    }
         if (state == QAbstractSocket::ClosingState)
         {
+            if (OutputFormat.toLower() == "json")
+            {
+                qDebug()<< "got JSON output" << LiveSocketData;
+                QJsonParseError jsonError ;
+                QJsonDocument json = QJsonDocument::fromJson(LiveSocketData, &jsonError);
+
+                if (json.isNull())
+                {
+                    qDebug() << jsonError.errorString();
+                    emit errorLiveSocket(jsonError.errorString(),2);
+                }
+                else
+                {
+                    //qDebug()<< "JSON burn" << json.toJson();
+
+                    QJsonArray jsonArray=json.array();
+                    //QJsonArray jsonSubArray=jsonArray.first().toArray();
+
+                    for (int i=0;i<jsonArray.size();i++)
+                    {
+                        qDebug() << "Json Value"<< i<< jsonArray.at(i);
+
+                    }
+                    emit sendLiveStatusJSONArray(storedPurpose, jsonArray);
+                }
+
+            }
+            else
+            {
             QList<QStringList> listOfStringLists;
 
                 //Splitt lines
@@ -71,5 +113,31 @@ void LiveSocket::stateChangedLiveStatus(QAbstractSocket::SocketState state)
                  }
 
                 emit sendLiveStatusData(storedPurpose, listOfStringLists);
+            }
         }
+   /*     else if (state == QAbstractSocket::UnconnectedState )
+        {
+            emit errorLiveSocket(QString(errorString()));
+        }
+        */
 }
+
+/*
+    #ifdef WIN32
+    #include <Winsock2.h>
+    #endif
+
+    #include "qmytcpsocket.h"
+
+    void QMyTcpSocket::abort()
+    {
+    #ifdef WIN32
+        SOCKET s = this->socketDescriptor();
+        BOOL bOptVal = FALSE;
+        int bOptLen = sizeof (BOOL);
+        setsockopt(s, SOL_SOCKET, SO_DONTLINGER, (char *) &bOptVal, bOptLen);
+    #endif
+        TcpSocket::abort();
+    }
+
+ */

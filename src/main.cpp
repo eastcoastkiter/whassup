@@ -1,18 +1,18 @@
-#include <QApplication> 
-#include "application.h"
-#include "closeEvent.h"
+#include <QApplication>
+#include "whassup.h"
+
 
 int main( int argc, char ** argv ) {
 
-    Q_INIT_RESOURCE(application);
+    Q_INIT_RESOURCE(whassup);
+
 
     QApplication window( argc, argv );
         window.setQuitOnLastWindowClosed(false);
-        window.installEventFilter(new myEventFilter());
 
-    ApplicationWindow *mw = new ApplicationWindow();
+    Whassup *mw = new Whassup();
 
-    QIcon mwIcon(":/ok.png");
+    QIcon mwIcon(":/images/ok.png");
         mw->setWindowIcon(mwIcon);
         mw->show();
 

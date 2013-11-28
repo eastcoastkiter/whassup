@@ -1,0 +1,30 @@
+- 0.8
+Features:
+HostDetail Window with ParentChild Viewer
+ServiceDetail Window with LogViewer
+Filter Window in Config with host, service, hostgroup and regexp support
+LogSearch Filter by hostname with completer
+GenerationTab
+hideTab parameter in Config (comma separeted list of tabs to hide)
+
+Changes:
+QT 5.1 Support
+JSON communication to livestatus
+livestatus request Class, which creates livestatus request (GET blah\nFilter: blub)
+tabs now chnages by name, not number
+
+New Classes:
+node
+edge
+genereationtree
+livesocketrequest
+pcdialod
+pcscene
+serviceinfowidget
+hostinfowidget
+logview
+logviewitem
+
+Bugs:
+Config write errors
+Filter empty lines

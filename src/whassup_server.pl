@@ -20,7 +20,6 @@ while (my $client = $server->accept()) {
    #print Dumper($client) . "is the new connection\n";
         my $client_data;
         $client->recv($client_data,10000);
-#       print "Client Data: $client_data\n";
 
         my $iosocket = IO::Socket::UNIX->new(Peer => $livestatus_socket,
                                                 Type     => SOCK_STREAM,

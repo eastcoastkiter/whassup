@@ -1,0 +1,32 @@
+<RCC>
+    <qresource prefix="/"/>
+    <qresource prefix="/helpfiles">
+        <file alias="configWidget.html">helpfiles/configWidget.html</file>
+        <file alias="filterWidget.html">helpfiles/filterWidget.html</file>
+        <file alias="hostDetail.html">helpfiles/hostDetail.html</file>
+        <file alias="serviceDetail.html">helpfiles/serviceDetail.html</file>
+        <file alias="serviceWidget.html">helpfiles/serviceWidget.html</file>
+        <file alias="Welcome.html">helpfiles/Welcome.html</file>
+        <file alias="downtimeWidget.html">helpfiles/downtimeWidget.html</file>
+        <file alias="logWidget.html">helpfiles/logWidget.html</file>
+        <file alias="servicetab.png">helpfiles/servicetab.png</file>
+        <file alias="servicedetail.png">helpfiles/servicedetail.png</file>
+        <file alias="hostdetail.png">helpfiles/hostdetail.png</file>
+        <file alias="filterview.png">helpfiles/filterview.png</file>
+        <file alias="whassupserver.html">helpfiles/whassupserver.html</file>
+    </qresource>
+    <qresource prefix="/images">
+        <file alias="action.png">images/action.png</file>
+        <file alias="critical.png">images/critical.png</file>
+        <file alias="notes.png">images/notes.png</file>
+        <file alias="ok.png">images/ok.png</file>
+        <file alias="warning.png">images/warning.png</file>
+        <file alias="web.png">images/web.png</file>
+        <file alias="log.png">images/log.png</file>
+        <file alias="info.png">images/info.png</file>
+        <file alias="checks_disabled.png">images/checks_disabled.png</file>
+        <file alias="checks_enabled.png">images/checks_enabled.png</file>
+        <file alias="notification_disabled.png">images/notification_disabled.png</file>
+        <file alias="notification_enabled.png">images/notification_enabled.png</file>
+    </qresource>
+</RCC>

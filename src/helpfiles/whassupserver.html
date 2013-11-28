@@ -1,0 +1,72 @@
+<!--Title: Whassup Server-->
+<!--Tag: Server-->
+<!--Parent: Server-->
+<!--Sort: 9-->
+<!--EndOfHead-->
+<html>
+<head>
+<META http-equiv=Content-Type content="text/html; charset=UTF-8">
+<title>Log Tab</title>
+<style type="text/css">
+span {
+	font-family: 'Courier New';
+        font-size: 9pt;
+	color: #000000;
+}
+.sc0 {
+}
+</style>
+</head>
+<body>
+<b>Whassup Server:</b><BR>
+<BR>
+<BR> Please take a look into INSTALL.txt too <BR>
+<BR>
+Whassup server is a forwarder between livestatus unix socket and a tcp socket.<BR>
+<BR>
+- whassup_server.pl<BR>
+A simple proxy for the livestatus socket without encryption.<BR>
+You will be able to use any livestatus table.<BR>
+<BR>
+- whassup.fcgi (recommended)<BR>
+    You will need a running apache webserver and add fcgi support.<BR>
+<BR>
+    Please take a look at the fcgid_module at http://httpd.apache.org<BR>
+    In short:<BR>
+    httpd.conf:LoadModule fcgid_module /usr/lib64/httpd/modules/mod_fcgid.so<BR>
+    httpd.conf:AddType application/x-httpd-fcgi .fcgi<BR>
+<BR>
+    add whassup.conf to your apache configuration folder:<BR>
+<BR>
+    Alias /whassup /usr/local/whassup<BR>
+    <Directory /usr/local/whassup><BR>
+        SetHandler fcgid-script<BR>
+        Options +ExecCGI<BR>
+        Order allow,deny<BR>
+        Allow from all<BR>
+        AuthName "Monitoring Access"<BR>
+        AuthType Basic<BR>
+       AuthUserFile /usr/local/nagios/etc/htpasswd.users<BR>
+       Require valid-user<BR>
+    </Directory><BR>
+<BR>
+    Insert something like this for LDAP (here AD controller) support:<BR>
+          AuthBasicProvider ldap file<BR>
+          AuthzLDAPAuthoritative Off<BR>
+          AuthLDAPURL "ldap://ldap.local:389/OU=Benutzer,dc=company,dc=local?sAMAccountName?sub?(memberOf=monitoringAdmins,OU=Gruppen,DC=company,DC=local)"<BR>
+          AuthLDAPBindDN "CN=lpaduser,DC=company,DC=local"<BR>
+          AuthLDAPBindPassword "ldappasswd"<BR>
+          AuthzLDAPLogLevel error<BR>
+<BR>
+    Copy whassup.fcgi to /usr/local/whassup and chown it to apache.<BR>
+    After restarting the httpd server, you should be able to run.<BR>
+
+<BR>
+- xinetd<BR>
+you could use xinetd to cat livestatus results.<BR>
+Please take a look at the livestatus webpage.<BR>
+
+
+
+</body>
+</html>

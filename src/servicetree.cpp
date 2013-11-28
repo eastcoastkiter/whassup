@@ -3,72 +3,61 @@ using namespace std;
 
 ServiceTree::ServiceTree(QWidget * parent): QTreeWidget( parent )
 {
-
-    Qt::SortOrder dateSortOrder= Qt::DescendingOrder;
-
-    setColumnCount(17);
+    sortOrder=0;
+    sortIndicator=3;
+    foundIncidents=false;
+    setSelectionMode(QAbstractItemView::MultiSelection);
+    setColumnCount(21);
     setContextMenuPolicy(Qt::CustomContextMenu);
-    header()->setResizeMode(QHeaderView::ResizeToContents);
+    header()->setSectionResizeMode(QHeaderView::ResizeToContents);
     QStringList headerLabelsService;
-        headerLabelsService << "Hostname" << "Services" << "Status" << "Last Change" << "State Type" << "Acknowledged" << "Notification_enabled";
+        headerLabelsService << "Hostname" << "Service" << "Status" << "Last Change" << "State Typ" << "Acknowledged" << "Notification_enabled";
         headerLabelsService << "Plugin Output" << "Downtimes" << "Downtime Depth" << "host_state" << "host_state_type" << "host_acknowledged";
-        headerLabelsService << "host_downtimes" << "host_scheduled_downtime_depth"  << "contacts" << "host_groups" << "last_check" << "last_state_change";
-
+        headerLabelsService << "host_downtimes" << "host_scheduled_downtime_depth"  << "contacts" << "host_address" << "host_notifications_enabled" << "active_checks_enabled" << "host_active_checks_enabled" << "epoch";
+//write last_change epoch in 20
+//write state to 2
         setHeaderLabels(headerLabelsService);
     setSortingEnabled (false);
 
+        hideColumn ( 2 );
+        hideColumn ( 4 );
+        hideColumn ( 5 );
+        hideColumn ( 6 );
+        hideColumn ( 8 );
+        hideColumn ( 9 );
+        hideColumn ( 10 );
+        hideColumn ( 11 );
+        hideColumn ( 12 );
+        hideColumn ( 13 );
+        hideColumn ( 14 );
+        hideColumn ( 15 );
+        hideColumn ( 19 );
+        hideColumn ( 20 );
+
 
         connect(this, SIGNAL(customContextMenuRequested ( const QPoint & )), this, SLOT(showServicePopup(const QPoint &)));
-        connect(header(), SIGNAL(sectionClicked(int)), this, SLOT(customSortByColumn(int)));
+        connect(header(), SIGNAL(sortIndicatorChanged(int,Qt::SortOrder)), this, SLOT(sortIndicatorChanged(int,Qt::SortOrder)));
 }
 
 ServiceTree::~ServiceTree()
-{
-}
-
-void ServiceTree::customSortByColumn(int column)
-{
-    //setSortingEnabled (false);
-
-    //header()->showSortIndicator(true);
-    // here you can get the order
-    Qt::SortOrder order = header()->sortIndicatorOrder();
-    //
-
-    // and sort the items
-    if ( (column == 3)  || (header()->sortIndicatorSection () == 18 ) )
-    {
-        setSortingEnabled (false);
-
-        if (dateSortOrder == Qt::AscendingOrder)
-        {
-             dateSortOrder = Qt::DescendingOrder;
-        }
-        else
-        {
-             dateSortOrder = Qt::AscendingOrder;
-        }
-
-        //QMessageBox::information(this,"col", QString("Col: %1").arg(column) + QString(" currentorder:%1").arg(header()->sortIndicatorOrder()) + QString(" dateSortOrder:%1").arg(dateSortOrder) + QString(" section:%1").arg(header()->sortIndicatorSection ()));
-        sortItems(18, dateSortOrder);
-        //header()->setSortIndicator ( 18, dateSortOrder );
-    }
-    else
-    {
-        //header()->setSortIndicator ( column, order );
-        sortItems(column, order);
-    }
-
-   // to get more control over actual sorting of items,
-    // reimplement QTreeWidgetItem::operator<()
-
-
- setSortingEnabled (true);
-
-}
+{}
 
 void ServiceTree::showServicePopup(const QPoint &iPosition)
 {
+    emit changeTimer(false);
+    //should be Select
+    //lastRightClickedItem->setSelected(true);
+    itemAt(iPosition)->setSelected(true);
+    selectedServices.clear();
+    for (int i = 0; i < selectedItems().size(); ++i)
+    {
+        QTreeWidgetItem *item=selectedItems().at(i);
+        QStringList hostAndService;
+        hostAndService << item->text(0) << item->text(1);
+        qDebug() << "Selected Items  " << hostAndService;
+        selectedServices << hostAndService;
+    }
+
     lastRightClickedItem = 0 ;
       lastRightClickedItem = itemAt(iPosition) ;
       if ( 0 == lastRightClickedItem )
@@ -78,7 +67,79 @@ void ServiceTree::showServicePopup(const QPoint &iPosition)
       else
       {
         qDebug() << "Item clicked" + lastRightClickedItem->text(0);
+
         QMenu menu(this);
+        QMenu* hostMenu = new QMenu(this);
+        hostMenu->setTitle("&Host");
+
+        //host_state                                    host_state_type                             host_acknowledge (already)
+        if ((lastRightClickedItem->text(10) != "0") && (lastRightClickedItem->text(11) != "0") && (lastRightClickedItem->text(12) == "0"))
+        {
+        QAction *hostAckRightAction   = new QAction("&Acknowledge", this);
+            hostAckRightAction->setIcon(QPixmap(ack_xpm));
+            hostAckRightAction->setObjectName("HostAcknowledge");
+                connect(hostAckRightAction, SIGNAL(triggered(bool)), this, SLOT(menuRightSlot(bool)));
+        hostMenu->addAction(hostAckRightAction);
+        }
+
+        QAction *hostDowntimeRightAction   = new QAction("&Downtime", this);
+            hostDowntimeRightAction->setIcon(QPixmap(downtime_xpm));
+            hostDowntimeRightAction->setObjectName("HostDowntime");
+                connect(hostDowntimeRightAction, SIGNAL(triggered(bool)), this, SLOT(menuRightSlot(bool)));
+        hostMenu->addAction(hostDowntimeRightAction);
+
+        hostMenu->addSeparator();
+
+        // 19 == host_active_checks_enabled
+        if (lastRightClickedItem->text(19) == "0")
+        {
+        QAction *hostEnableActiveChecks   = new QAction("&Enable Active Checks", this);
+            hostEnableActiveChecks->setIcon(QIcon(":/images/checks_enabled.png"));
+            hostEnableActiveChecks->setObjectName("HostEnableActiveChecks");
+                connect(hostEnableActiveChecks, SIGNAL(triggered(bool)), this, SLOT(menuRightSlot(bool)));
+        hostMenu->addAction(hostEnableActiveChecks);
+        }
+        else
+        {
+            QAction *hostDisableActiveChecks   = new QAction("&Disable Active Checks", this);
+                hostDisableActiveChecks->setIcon(QIcon(":/images/checks_disabled.png"));
+                hostDisableActiveChecks->setObjectName("HostDisableActiveChecks");
+                    connect(hostDisableActiveChecks, SIGNAL(triggered(bool)), this, SLOT(menuRightSlot(bool)));
+            hostMenu->addAction(hostDisableActiveChecks);
+        }
+
+        // 17 == host_notifications_enabled
+        if (lastRightClickedItem->text(17) == "0")
+        {
+        QAction *hostEnableNotifications   = new QAction("&Enable Notifications", this);
+            hostEnableNotifications->setIcon(QIcon(":/images/notification_enabled.png"));
+            hostEnableNotifications->setObjectName("HostEnableNotifications");
+                connect(hostEnableNotifications, SIGNAL(triggered(bool)), this, SLOT(menuRightSlot(bool)));
+        hostMenu->addAction(hostEnableNotifications);
+        }
+        else
+        {
+            QAction *hostDisableNotifications   = new QAction("&Disable Notifications", this);
+                hostDisableNotifications->setIcon(QIcon(":/images/notification_disabled.png"));
+                hostDisableNotifications->setObjectName("HostDisableNotifications");
+                    connect(hostDisableNotifications, SIGNAL(triggered(bool)), this, SLOT(menuRightSlot(bool)));
+            hostMenu->addAction(hostDisableNotifications);
+        }
+
+        hostMenu->addSeparator();
+
+        QAction *hostSearchLogRightAction   = new QAction("&Log Search", this);
+            hostSearchLogRightAction->setIcon(QIcon(":/images/log.png"));
+            hostSearchLogRightAction->setObjectName("LogSearch");
+                connect(hostSearchLogRightAction, SIGNAL(triggered(bool)), this, SLOT(menuRightSlot(bool)));
+        hostMenu->addAction(hostSearchLogRightAction);
+
+        QAction *hostDetailRightAction = new QAction("&Detail", this);
+            hostDetailRightAction->setIcon(QIcon(":/images/info.png"));
+            hostDetailRightAction->setObjectName("HostDetail");
+                connect(hostDetailRightAction, SIGNAL(triggered(bool)), this, SLOT(menuRightSlot(bool)));
+        hostMenu->addAction(hostDetailRightAction);
+
         QMenu* serviceMenu = new QMenu(this);
         serviceMenu->setTitle("&Service");
 
@@ -104,35 +165,55 @@ void ServiceTree::showServicePopup(const QPoint &iPosition)
                 connect(downtimeRightAction, SIGNAL(triggered(bool)), this, SLOT(menuRightSlot(bool)));
         serviceMenu->addAction(downtimeRightAction);
 
-        QMenu* contactMenu = new QMenu(this);
-            contactMenu->setTitle("Contacts");
-        QStringList list = lastRightClickedItem->text(15).split(',');
-        for (int i = 0; i < list.size(); ++i)
-         {
-            QAction* cAction = new QAction(list.at(i), this);
-                 cAction->setEnabled(false);
-             contactMenu->addAction(cAction);
-         }
+        serviceMenu->addSeparator();
 
-        //host_groups
-        QMenu* host_groupsMenu = new QMenu(this);
-            host_groupsMenu->setTitle("Hostgroups");
-        QStringList hglist = lastRightClickedItem->text(16).split(',');
-        for (int i = 0; i < hglist.size(); ++i)
-         {
-            QAction* hgAction = new QAction(hglist.at(i), this);
-                 hgAction->setEnabled(false);
-             host_groupsMenu->addAction(hgAction);
-         }
-
-
-        menu.addMenu(serviceMenu);
-        menu.addSeparator();
-        menu.addMenu(contactMenu);
-        if (QStringList(lastRightClickedItem->text(16).split(',')).size()>=0)
+        // 18 == active_checks_enabled
+        if (lastRightClickedItem->text(18) == "0")
         {
-            menu.addMenu(host_groupsMenu);
+        QAction *serviceEnableActiveChecks   = new QAction("&Enable Active Checks", this);
+            serviceEnableActiveChecks->setIcon(QIcon(":/images/checks_enabled.png"));
+            serviceEnableActiveChecks->setObjectName("ServiceEnableActiveChecks");
+                connect(serviceEnableActiveChecks, SIGNAL(triggered(bool)), this, SLOT(menuRightSlot(bool)));
+        serviceMenu->addAction(serviceEnableActiveChecks);
         }
+        else
+        {
+            QAction *serviceDisableActiveChecks   = new QAction("&Disable Active Checks", this);
+                serviceDisableActiveChecks->setIcon(QIcon(":/images/checks_disabled.png"));
+                serviceDisableActiveChecks->setObjectName("ServiceDisableActiveChecks");
+                    connect(serviceDisableActiveChecks, SIGNAL(triggered(bool)), this, SLOT(menuRightSlot(bool)));
+            serviceMenu->addAction(serviceDisableActiveChecks);
+        }
+
+        // 6 == service_notifications_enabled
+        if (lastRightClickedItem->text(6) == "0")
+        {
+        QAction *serviceEnableNotifications   = new QAction("&Enable Notifications", this);
+            serviceEnableNotifications->setIcon(QIcon(":/images/notification_enabled.png"));
+            serviceEnableNotifications->setObjectName("ServiceEnableNotifications");
+                connect(serviceEnableNotifications, SIGNAL(triggered(bool)), this, SLOT(menuRightSlot(bool)));
+        serviceMenu->addAction(serviceEnableNotifications);
+        }
+        else
+        {
+            QAction *serviceDisableNotifications   = new QAction("&Disable Notifications", this);
+                serviceDisableNotifications->setIcon(QIcon(":/images/notification_disabled.png"));
+                serviceDisableNotifications->setObjectName("ServiceDisableNotifications");
+                    connect(serviceDisableNotifications, SIGNAL(triggered(bool)), this, SLOT(menuRightSlot(bool)));
+            serviceMenu->addAction(serviceDisableNotifications);
+        }
+
+        serviceMenu->addSeparator();
+
+        QAction *serviceDetailRightAction = new QAction("&Detail", this);
+        serviceDetailRightAction->setIcon(QIcon(":/images/info.png"));
+            serviceDetailRightAction->setObjectName("ServiceDetail");
+                connect(serviceDetailRightAction, SIGNAL(triggered(bool)), this, SLOT(menuRightSlot(bool)));
+        serviceMenu->addAction(serviceDetailRightAction);
+
+        menu.addMenu(hostMenu);
+        menu.addMenu(serviceMenu);
+    //    menu.addSeparator();
 
         menu.exec(mapToGlobal(iPosition));
       }
@@ -141,253 +222,106 @@ void ServiceTree::showServicePopup(const QPoint &iPosition)
 
 void ServiceTree::menuRightSlot(bool on)
 {
+    emit changeTimer(true);
+    (void) on;
+    qDebug()<< "lastRightClickedItem->text(0)" << lastRightClickedItem->text(0) << lastRightClickedItem->text(1);
 
-    if (sender()->objectName() == "Acknowledge")
-        lastCmdTyp=CMD_ACKNOWLEDGE_SVC_PROBLEM;
-    else if (sender()->objectName() == "Reschedule")
-        lastCmdTyp=CMD_SCHEDULE_SVC_CHECK;
-    else if (sender()->objectName() == "Downtime")
-        lastCmdTyp=CMD_SCHEDULE_SVC_DOWNTIME;
+    if (sender()->objectName() == "LogSearch")
+    {
+        emit signalLogSearch(lastRightClickedItem->text(0));
+        return;
+    }
+    else if (sender()->objectName() == "HostDetail")
+    {
+        emit signalHostDetail(lastRightClickedItem->text(0));
+        return;
+    }
+    else if (sender()->objectName() == "ServiceDetail")
+    {
+        emit signalServiceDetail(lastRightClickedItem->text(0),lastRightClickedItem->text(1));
+        return;
+    }
     else
-        return;
-
-    qDebug() << nagioshostname;
-    QDateTime dt = QDateTime::currentDateTime ();
-
-    menuWidget = new QWidget((QWidget*)parent());
-        menuWidget->resize(250,200);
-        menuWidget->setWindowTitle(sender()->objectName());
-        menuWidget->setWindowFlags(Qt::Dialog);
-
-    QGridLayout* ackGrid = new QGridLayout(menuWidget);
-        ackGrid->addWidget(new QLabel("Hostname:", menuWidget),0,0);
-        ackHostname = new QLineEdit(lastRightClickedItem->text(0),menuWidget);
-                ackGrid->addWidget(ackHostname,0,1);
-
-        ackGrid->addWidget(new QLabel("Service:", menuWidget),1,0);
-        ackService = new QLineEdit(lastRightClickedItem->text(1),menuWidget);
-                ackGrid->addWidget(ackService,1,1);
-
-        if ( (lastCmdTyp==CMD_SCHEDULE_SVC_CHECK) || (lastCmdTyp==CMD_SCHEDULE_SVC_DOWNTIME) || (lastCmdTyp==CMD_SCHEDULE_HOST_SVC_DOWNTIME) )
-                        {
-            ackGrid->addWidget(new QLabel("Start:", menuWidget),2,0);
-            ackStart= new QDateTimeEdit(menuWidget);
-                ackStart->setDateTime(dt);
-                ackStart->setDisplayFormat("dd.MM.yy hh:mm");
-                ackStart->setSelectedSection(QDateTimeEdit::MinuteSection);
-            ackGrid->addWidget(ackStart,2,1);
-        }
-
-        if (lastCmdTyp==CMD_SCHEDULE_SVC_DOWNTIME)
-        {
-            ackGrid->addWidget(new QLabel("All Services:", menuWidget),3,0);
-            ackAllServices = new QCheckBox(menuWidget);
-            ackGrid->addWidget(ackAllServices,3,1);
-
-            ackGrid->addWidget(new QLabel("Duration:", menuWidget),4,0);
-
-            QGridLayout* durationGrid = new QGridLayout(menuWidget);
-            ackGrid->addLayout(durationGrid,4,1);
-
-            durationGrid->addWidget(new QLabel("(h/m)", menuWidget),0,0);
-
-            ackHourDuration = new QSpinBox();
-                ackHourDuration->setValue(0);
-                ackHourDuration->setRange(0,100);
-            durationGrid->addWidget(ackHourDuration,0,1);
-
-            ackMinuteDuration = new QSpinBox();
-                ackMinuteDuration->setValue(15);
-                ackMinuteDuration->setRange(0,59);
-            durationGrid->addWidget(ackMinuteDuration,0,2);
-
-        }
-
-        if ( (lastCmdTyp==CMD_ACKNOWLEDGE_SVC_PROBLEM) || (lastCmdTyp==CMD_SCHEDULE_SVC_DOWNTIME) )
-        {
-            ackGrid->addWidget(new QLabel("Comment:", menuWidget),5,0);
-                ackComment = new QLineEdit("At: " + dt.toString("dd.MM.yy hh:mm"),menuWidget);
-            ackGrid->addWidget(ackComment,5,1);
-        }
-
-        ackGrid->addWidget(new QLabel("Author:", menuWidget),6,0);
-        ackAuthor = new QLineEdit(getenv("USERNAME"),menuWidget);
-        if (!storUsername.isEmpty())
-            ackAuthor->setText(storUsername);
-                ackGrid->addWidget(ackAuthor,6,1);
-
-        ackGrid->addWidget(new QLabel("Password:", menuWidget),7,0);
-        ackPassword = new QLineEdit("",menuWidget);
-        connect( ackPassword, SIGNAL( returnPressed()) , this, SLOT( ackSubmitSlot() ) );
-            ackPassword->setEchoMode(QLineEdit::Password);
-            if (!storPassword.isEmpty())
-                ackPassword->setText(storPassword);
-        ackGrid->addWidget(ackPassword,7,1);
-
-
-        QPushButton* ackSubmitButton = new QPushButton("Submit", menuWidget);
-           ackGrid->addWidget(ackSubmitButton,9,1);
-           connect( ackSubmitButton, SIGNAL( pressed()) , this, SLOT( ackSubmitSlot() ) );
-
-        ackGrid->addItem(new QSpacerItem ( 10, 10, QSizePolicy::Expanding, QSizePolicy::Expanding ),10,10);
-    menuWidget->show();
-}
-
-
-
-void ServiceTree::ackSubmitSlot()
-{
-    QDateTime dt = QDateTime::currentDateTime ();
-    if (lastCmdTyp==CMD_SCHEDULE_SVC_DOWNTIME)
     {
-        if (ackAllServices->isChecked())
+        CommandWidget* commandWidget = new CommandWidget(this);
+            connect(commandWidget, SIGNAL(setStatusBar(QString, int)), this,SLOT(receivedStatusBar(QString, int)));
+            connect(commandWidget, SIGNAL(sendLiveStatusData(QString, QString)), this,SLOT(slotSendLiveStatusData(QString, QString)));
+
+        if (sender()->objectName() == "Acknowledge")
         {
-            lastCmdTyp=CMD_SCHEDULE_HOST_SVC_DOWNTIME;
+            // why a new Qlist, this creates a shallow copy, which deeps if qrignal changes
+            //so if timer changes orginal list, copy stays, great!
+            commandWidget->acknowledgeService(QList <QTreeWidgetItem* > (selectedItems()));
+            return;
+        }
+        else if (sender()->objectName() == "Reschedule")
+        {
+            commandWidget->scheduleServiceCheck(QList <QTreeWidgetItem* > (selectedItems()));
+            return;
+        }
+        else if (sender()->objectName() == "HostAcknowledge")
+        {
+            commandWidget->acknowledgeHost(QList <QTreeWidgetItem* > (selectedItems()));
+            return;
+        }
+        else if (sender()->objectName() == "Downtime")
+        {
+            commandWidget->scheduleServiceDowntime(QList <QTreeWidgetItem* > (selectedItems()));
+            return;
+        }
+        else if (sender()->objectName() == "HostDowntime")
+        {
+            commandWidget->scheduleHostDowntime(QList <QTreeWidgetItem* > (selectedItems()));
+            return;
+        }
+        else if (sender()->objectName() == "HostEnableActiveChecks")
+        {
+            commandWidget->enableHostCheck(QList <QTreeWidgetItem* > (selectedItems()));
+            return;
+        }
+        else if (sender()->objectName() == "HostDisableActiveChecks")
+        {
+            commandWidget->disableHostCheck(QList <QTreeWidgetItem* > (selectedItems()));
+            return;
+        }
+        else if (sender()->objectName() == "HostEnableNotifications")
+        {
+            commandWidget->enableHostNotification(QList <QTreeWidgetItem* > (selectedItems()));
+            return;
+        }
+        else if (sender()->objectName() == "HostDisableNotifications")
+        {
+            commandWidget->disableHostNotification(QList <QTreeWidgetItem* > (selectedItems()));
+            return;
+        }
+        else if (sender()->objectName() == "ServiceEnableActiveChecks")
+        {
+            commandWidget->enableServiceCheck(QList <QTreeWidgetItem* > (selectedItems()));
+            return;
+        }
+        else if (sender()->objectName() == "ServiceDisableActiveChecks")
+        {
+            commandWidget->disableServiceCheck(QList <QTreeWidgetItem* > (selectedItems()));
+            return;
+        }
+        else if (sender()->objectName() == "ServiceEnableNotifications")
+        {
+            commandWidget->enableServiceNotification(QList <QTreeWidgetItem* > (selectedItems()));
+            return;
+        }
+        else if (sender()->objectName() == "ServiceDisableNotifications")
+        {
+            commandWidget->disableServiceNotification(QList <QTreeWidgetItem* > (selectedItems()));
+            return;
+        }
+
+        else
+        {
+            return;
         }
     }
-    menuWidget->close();
-
-    //Get Data
-    QUrl nagiosUrl;
-        nagiosUrl.setUrl("http://" + nagioshostname + "/nagios/cgi-bin/cmd.cgi");
-
-        if (!ackAuthor->text().isEmpty())
-            nagiosUrl.setUserName(ackAuthor->text().toLatin1());
-        if (!ackPassword->text().isEmpty())
-            nagiosUrl.setPassword(ackPassword->text().toLatin1());
-
-        QByteArray postData;
-
-            // Host
-            nagiosUrl.addQueryItem("host",QUrl::toPercentEncoding(ackHostname->text()));
-            postData.append("host=" + QUrl::toPercentEncoding(ackHostname->text()) + "&");
-
-            //Service
-            nagiosUrl.addQueryItem("service",QUrl::toPercentEncoding(ackService->text()));
-            postData.append("service=" + QUrl::toPercentEncoding(ackService->text()) + "&");
-
-            // cmd mode 2 = commit
-            nagiosUrl.addQueryItem("cmd_mode","2");
-            postData.append("cmd_mod=2&");
-
-            //cmd_typ
-            nagiosUrl.addQueryItem("cmd_typ",lastCmdTyp);
-            postData.append("cmd_typ=" + lastCmdTyp + "&");
-
-            //Author (Reschedule?)
-            nagiosUrl.addQueryItem("com_author",ackAuthor->text().toLatin1());
-            postData.append("cmd_author=" + ackAuthor->text().toLatin1() + "&");
-
-
-            // force check for resched
-            if (lastCmdTyp==CMD_SCHEDULE_SVC_CHECK)
-            {
-                nagiosUrl.addQueryItem("force_check","TRUE");
-                postData.append("force_check=TRUE&");
-            }
-
-            // start_time
-            if ( (lastCmdTyp==CMD_SCHEDULE_SVC_CHECK) || (lastCmdTyp==CMD_SCHEDULE_SVC_DOWNTIME) || (lastCmdTyp==CMD_SCHEDULE_HOST_SVC_DOWNTIME) )
-            {
-                nagiosUrl.addQueryItem("start_time", QUrl::toPercentEncoding(ackStart->dateTime().toString("MM-dd-yyyy hh:mm:ss")));
-                postData.append("start_time=" + ackStart->dateTime().toString("MM-dd-yyyy hh:mm:ss") + "&");
-            }
-
-            //downtime infos
-            if ((lastCmdTyp==CMD_SCHEDULE_SVC_DOWNTIME) || (lastCmdTyp==CMD_SCHEDULE_HOST_SVC_DOWNTIME) )
-            {
-                nagiosUrl.addQueryItem("trigger","0");
-                postData.append("trigger=0&");
-
-                nagiosUrl.addQueryItem("fixed","1");
-                postData.append("fixed=1&");
-
-                nagiosUrl.addQueryItem("hours",QString("%1").arg(ackHourDuration->value()));
-                postData.append("hours=" + QString("%1").arg(ackHourDuration->value()) + "&");
-
-                nagiosUrl.addQueryItem("minutes",QString("%1").arg(ackMinuteDuration->value()));
-                postData.append("minutes=" + QString("%1").arg(ackMinuteDuration->value()) + "&");
-
-                nagiosUrl.addQueryItem("end_time",ackStart->dateTime().addSecs((ackHourDuration->value()*3600)+(ackMinuteDuration->value()*60)).toString("MM-dd-yyyy hh:mm:ss"));
-                postData.append("end_time=" + ackStart->dateTime().addSecs((ackHourDuration->value()*3600)+(ackMinuteDuration->value()*60)).toString("MM-dd-yyyy hh:mm:ss") +"&");
-            }
-
-           //Comment
-            if ( (lastCmdTyp==CMD_ACKNOWLEDGE_SVC_PROBLEM) || (lastCmdTyp==CMD_SCHEDULE_SVC_DOWNTIME) || (lastCmdTyp==CMD_SCHEDULE_HOST_SVC_DOWNTIME) )
-            {
-                nagiosUrl.addQueryItem("com_data",QUrl::toPercentEncoding(ackComment->text()));
-                postData.append("com_data=" + ackComment->text().toLatin1());
-            }
-
-
-    qDebug() << "URL: "<< nagiosUrl.toString();
-
-        //Data
-        QNetworkRequest header;
-        header.setUrl(nagiosUrl);
-        header.setRawHeader( "User-Agent", "User Agent");
-        header.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
-
-        sendNagiosHttp(header, postData);
 }
 
-void ServiceTree::sendNagiosHttp(QNetworkRequest header, QByteArray postData)
-{
-qDebug() << "PostData: "<< postData;
-
-QNetworkAccessManager *manager = new QNetworkAccessManager(this);
-    reply=manager->post(header,postData);
-        connect(reply, SIGNAL(readyRead()), this, SLOT(slotReadyReadHttp()));
-}
-
-void ServiceTree::slotReadyReadHttp()
-{
-
-    int start, stop;
-    //<title>401 Authorization Required</title>
-
-    QString all = reply->readAll();
-        qDebug() << all;
-    if (all.isEmpty())
-        return;
-
-    //Nagios Status
-    start=all.indexOf("<DIV CLASS='infoMessage'>");
-    if (start>0)
-    {
-        stop=all.indexOf("<BR>",start);
-        if ( stop > start)
-        {
-            qDebug() << "mid" << all.mid(start+25,stop-(start+25));
-            emit setStatusBar(QString(all.mid(start+25,stop-(start+25))).toLatin1());
-        }
-    }
-
-    start=all.indexOf("<DIV CLASS='errorMessage'>");
-    if (start>0)
-    {
-        stop=all.indexOf("</DIV>",start);
-        if ( stop > start)
-        {
-            qDebug() << "mid" << all.mid(start+26,stop-(start+26));
-            emit setStatusBar(QString(all.mid(start+26,stop-(start+26))).toLatin1());
-        }
-    }
-
-    //Nagios Status
-    start=all.indexOf("401 Auth");
-    if (start>0)
-    {
-            emit setStatusBar("Command Error: 401 Authorization Required");
-    }
-
-
-    //if (!ackAuthor->text().isEmpty())
-
-       storUsername=ackAuthor->text();
-     storPassword=ackPassword->text();
-    //delete menuWidget;
-}
 
 void ServiceTree::setHiddenColumns(int columnInt)
 {
@@ -421,6 +355,9 @@ void ServiceTree::setHiddenColumns(int columnInt)
     hideColumn ( 15 );
     hideColumn ( 16 );
     hideColumn ( 18 );
+    hideColumn ( 19 );
+    hideColumn ( 20 );
+
 
     //Last Change
     if (columnInt & 1)
@@ -470,3 +407,309 @@ void ServiceTree::setHiddenColumns(int columnInt)
         hideColumn(17);
 
 }
+
+void ServiceTree::gotServiceDataJson(QJsonArray jsonUpperArray)
+{
+    QList<QTreeWidgetItem *> items;
+    clear();
+    update();
+    int serviceBadStates=0;
+
+/*
+0 host_name
+1 description
+2 state
+3 last_state_change
+4 state_type
+5 acknowledged
+6 notifications_enabled
+7 plugin_output
+8 downtimes
+9 scheduled_downtime_depth
+10 host_state
+11 host_state_type
+12 host_acknowledge
+13 host_downtimes
+14 host_scheduled_downtime_depth
+15 contacts
+*/
+    qDebug() << jsonUpperArray.at(0);
+    for (int k = 0; k < jsonUpperArray.size()-1; ++k)
+    {
+        QJsonArray jsonArray=jsonUpperArray.at(k).toArray();
+        QStringList itemValues;
+
+        int c=0;
+        QString jhost_name=jsonArray.at(c).toString();
+            itemValues << jhost_name;
+        c++;
+        QString jdescription=jsonArray.at(c).toString();
+            itemValues << jdescription;
+        c++;
+        int jstate=jsonArray.at(c).toDouble();
+            itemValues << QString("%1").arg(jstate);
+        c++;
+        int jlast_state_change=jsonArray.at(c).toDouble();
+            itemValues << QString("%1").arg(jlast_state_change);
+        c++;
+        int jstate_type=jsonArray.at(c).toDouble();
+            itemValues << QString("%1").arg(jstate_type);
+        c++;
+        int jacknowledged=jsonArray.at(c).toDouble();
+            itemValues << QString("%1").arg(jacknowledged);
+        c++;
+        int jnotifications_enabled=jsonArray.at(c).toDouble();
+            itemValues << QString("%1").arg(jnotifications_enabled);
+        c++;
+        QString jplugin_output=jsonArray.at(c).toString();
+            itemValues << jplugin_output;
+        c++;
+        int jdowntimes=jsonArray.at(c).toDouble();
+            itemValues << QString("%1").arg(jdowntimes);
+        c++;
+        int jscheduled_downtime_depth=jsonArray.at(c).toDouble();
+            itemValues << QString("%1").arg(jscheduled_downtime_depth);
+        c++;
+        int jhost_state=jsonArray.at(c).toDouble();
+            itemValues << QString("%1").arg(jhost_state);
+        c++;
+        int jhost_state_type=jsonArray.at(c).toDouble();
+            itemValues << QString("%1").arg(jhost_state_type);
+        c++;
+        int jhost_acknowledge=jsonArray.at(c).toDouble();
+            itemValues << QString("%1").arg(jhost_acknowledge);
+        c++;
+        int jhost_downtimes=jsonArray.at(c).toDouble();
+            itemValues << QString("%1").arg(jhost_downtimes);
+        c++;
+        int jhost_scheduled_downtime_depth=jsonArray.at(c).toDouble();
+            itemValues << QString("%1").arg(jhost_scheduled_downtime_depth);
+        c++;
+        QString jcontacts=jsonArray.at(c).toString();
+            itemValues << QString("%1").arg(jcontacts);
+        c++;
+        QString jhost_address=jsonArray.at(c).toString();
+            itemValues << QString("%1").arg(jhost_address);
+
+        c++;
+        int jhost_notifications_enabled=jsonArray.at(c).toDouble();
+            itemValues << QString("%1").arg(jhost_notifications_enabled);
+
+        c++;
+        int jactive_checks_enabled=jsonArray.at(c).toDouble();
+            itemValues << QString("%1").arg(jactive_checks_enabled);
+
+        c++;
+        int jhost_active_checks_enabled=jsonArray.at(c).toDouble();
+            itemValues << QString("%1").arg(jhost_active_checks_enabled);
+
+            // check if new
+            if ( (jstate != 0) && (!foundIncidents) && (!lastServices.isEmpty()) )
+            {
+                //qDebug() << "comparing";
+                compareIncidents(jhost_name, jdescription);
+            }
+            // fill list to compare later
+        currentServices << jhost_name + jdescription;
+
+
+       // qDebug() << "hname" << jhost_name;
+        QList<QTreeWidgetItem *> hostList;
+        hostList=findItems(jhost_name,Qt::MatchExactly,0);
+
+        ServiceTreeItem* Item = new ServiceTreeItem(itemValues,QTreeWidgetItem::Type);
+        int timezone=qApp->property("ClientTimezone").toInt();
+       // qDebug() << "timezone" << timezone;
+        QString TimeFormat=qApp->property("ClientTimeFormat").toString();
+        int epochSecs=(jlast_state_change);
+                QDateTime dt = QDateTime::fromString("01-01-70 00:00:00", "dd-MM-yy HH:mm:ss").addSecs(epochSecs+(3600*timezone));
+
+                //Item->setText(3,dt.toString("HH:mm dd-MM-yy"));
+        Item->setText(3,dt.toString(TimeFormat));
+
+        // set epoch for sorting
+        Item->setText(20,QString("%1").arg(epochSecs));
+
+        //state for sorting is col2
+
+        if (hostList.size() > 0)
+        {
+            //host exists, append next service
+            hostList.first()->addChild(Item);
+        }
+        else
+        {
+            items.append(Item);
+        }
+        insertTopLevelItems(0, items);
+
+
+        // lets do the color for hosts
+        if (jhost_state == 1)
+        {
+            if (jhost_acknowledge == 0)
+              Item->setIcon(0, QIcon(QPixmap(critical_xpm)) );
+            else
+              Item->setIcon(0, QIcon(QPixmap(critical_ack_xpm)) );
+        }
+        else if (jhost_state == 0)
+        {
+                //Item->setIcon(0, QIcon(ok_xpm) );
+        }
+        else
+        {
+             Item->setIcon(0, QIcon(QPixmap(unknown_xpm)) );
+             serviceBadStates++;
+        }
+
+        if (jstate_type == 0)
+        {
+            Item->setIcon(3, QIcon(QPixmap(soft_xpm)) );
+        }
+
+        if (jnotifications_enabled == 0)
+        {
+            Item->setIcon(1, QIcon(QPixmap(ndisabled_xpm)) );
+        }
+
+
+        if (jhost_notifications_enabled == 0)
+        {
+            Item->setIcon(0, QIcon(QPixmap(ndisabled_xpm)) );
+        }
+
+        if (jstate_type == 0)
+        {
+            Item->setIcon(3, QIcon(QPixmap(soft_xpm)) );
+        }
+
+        if (jhost_active_checks_enabled == 0)
+        {
+            Item->setIcon(0, QIcon(":/images/checks_disabled.png") );
+        }
+
+        if (jactive_checks_enabled == 0)
+        {
+            Item->setIcon(3, QIcon(":/images/checks_disabled.png") );
+        }
+
+        // lets do the color fro services
+        if (jstate == 2)
+        {
+            if (jacknowledged == 0)
+            {
+              Item->setIcon(1, QIcon(QPixmap(critical_xpm)) );
+              serviceBadStates++;
+            }
+            else
+            {
+              Item->setIcon(1, QIcon(QPixmap(critical_ack_xpm)) );
+            }
+        }
+        else if (jstate == 1)
+        {
+            if (jacknowledged == 0)
+            {
+                 Item->setIcon(1, QIcon(QPixmap(warning_xpm)) );
+                 serviceBadStates++;
+            }
+            else
+            {
+                 Item->setIcon(1, QIcon(QPixmap(warning_ack_xpm)) );
+            }
+        }
+        else if (jstate == 0)
+        {
+                Item->setIcon(1, QIcon(QPixmap(ok_xpm)) );
+        }
+        else
+        {
+             Item->setIcon(1, QIcon(QPixmap(unknown_xpm)) );
+             serviceBadStates++;
+        }
+
+        //notification
+        if (jnotifications_enabled == 0)
+        {
+            Item->setIcon(3, QIcon(QPixmap(ndisabled_xpm)) );
+        }
+
+        //soft state
+        if ( (jstate_type == 0) || (jhost_state_type == 0) )
+        {
+            Item->setIcon(3, QIcon(QPixmap(soft_xpm)) );
+        }
+
+
+        //downtime service
+        if ( (jdowntimes != 0) || (jscheduled_downtime_depth != 0) )
+        {
+            Item->setIcon(1, QIcon(QPixmap(downtime_xpm)) );
+        }
+
+        //downtime host
+        if ( (jhost_downtimes != 0) || (jhost_scheduled_downtime_depth != 0) )
+        {
+            Item->setIcon(0, QIcon(QPixmap(downtime_xpm)) );
+        }
+
+  }
+
+        //ugly hack, sequentiell
+        //sortByColumn(0,Qt::AscendingOrder);
+        setSortingEnabled (true);
+       // serviceTree->expandAll();
+
+        emit signalSetTraySystemIcon(serviceBadStates);
+
+        /* Remember the last errors */
+        lastServices=currentServices;
+        currentServices.clear();
+        //set to false for next run
+        foundIncidents=false;
+}
+
+void ServiceTree::compareIncidents(QString chost_name, QString cdescription)
+{
+/* lets do a trick here
+ * to compare, if there are new faulty service, we create a Stringlist
+ *but what do we do with hostname and description
+ *ok just add them, we don't need them afterwards anymore
+*/
+    if (!qApp->property("ClientBlinkSystemTray").toBool())
+        return;
+
+    QString compareTmpString = chost_name + cdescription;
+    if (!lastServices.contains(compareTmpString))
+    {
+        foundIncidents=true;
+        qDebug() << "new Error" << chost_name << cdescription;
+        emit foundIncident();
+    }
+}
+
+void ServiceTree::sortIndicatorChanged(int col,Qt::SortOrder sOrder)
+{
+    sortOrder=sOrder;
+    sortIndicator=col;
+}
+
+void ServiceTree::writeSettings(QSettings* settings)
+{
+    settings->beginGroup("ServiceTree");
+        settings->setValue("SortOrder", sortOrder);
+        settings->setValue("SortIndicator", sortIndicator);
+    settings->endGroup();
+    settings->sync();
+}
+
+void ServiceTree::loadSettings(QSettings* settings)
+{
+    settings->beginGroup("ServiceTree");
+        sortOrder=settings->value("SortOrder").toInt();
+        sortIndicator=settings->value("SortIndicator").toInt();
+        header()->setSortIndicator(sortIndicator,(Qt::SortOrder) sortOrder);
+    settings->endGroup();
+}
+
+

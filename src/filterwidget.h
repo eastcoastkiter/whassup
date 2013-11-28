@@ -41,6 +41,7 @@ private slots:
     void remove();
 
 public slots:
+    void setNewFilter(QStringList, QStringList, QStringList);
 signals:
     void gotNewFilter(QString);
 };

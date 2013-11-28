@@ -1,0 +1,63 @@
+<!--Title: Host Detail-->
+<!--Tag: Service-->
+<!--Parent: Service-->
+<!--Sort: 2-->
+<!--EndOfHead-->
+<html>
+<head>
+<META http-equiv=Content-Type content="text/html; charset=UTF-8">
+<title>ServiceWidget</title>
+<style type="text/css">
+span {
+	font-family: 'Courier New';
+        font-size: 9pt;
+	color: #000000;
+}
+.sc0 {
+}
+</style>
+</head>
+<body>
+<b>Host Detail View:</b><BR>
+<BR>
+The host detail view is an additional view.<BR>
+<BR>
+Host Detail View shows some common host information.<BR>
+<BR>
+It also displays your the parent/child relations.<BR>
+You can move any object in the parent/child view.<BR>
+<BR>
+- Generation<BR>
+Use Generation to add child/parent generation.<BR>
+<BR>
+- Force<BR>
+Layout your generations automatically<BR>
+<BR>
+- Scale<BR>
+Scale to all items in the scene<BR>
+<BR>
+Double Click on a host will open Host Detail for that host.<BR>
+<BR>
+Services:<BR>
+Table of all services on this host. Double click to open<BR>
+service detail for this host.<BR>
+<BR>
+- Open in Browser<BR>
+Opens this host in the browser, the url will be build from the<BR>
+CGI path you configured in "Server Config". Whassup will append to<BR>
+this cgi path an additional "status.cgi?host=Hostname".<BR>
+<BR>
+This should be fine for many monitoring system, if this does not<BR>
+suite your requirements, please do not hesitate to contact me.<BR>
+Alternativ you could take a look into mod_rewrite or<BR>
+html meta refresh/redirection, if you like to use this information<BR>
+in other parts.<BR>
+<BR>
+Open Action URL and Notes Url will open your default browser and load<BR>
+the full action/notes URl configured in your monitoring server.<BR>
+<BR>
+<img src="qrc:/helpfiles/hostdetail.png"><BR>
+
+
+</body>
+</html>

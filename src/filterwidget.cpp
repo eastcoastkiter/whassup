@@ -81,8 +81,11 @@ FilterWidget::FilterWidget(QString inputFilterText,QStringList configServiceList
 
     mainGrid->addItem(new QSpacerItem ( 10, 10, QSizePolicy::Expanding, QSizePolicy::Expanding ),11,11);
 
-    QStringList FilterSplit=inputFilterText.split(',');
-    filterBox->addItems(FilterSplit);
+    if (!inputFilterText.trimmed().isEmpty())
+    {
+        QStringList FilterSplit=inputFilterText.split(',');
+        filterBox->addItems(FilterSplit);
+    }
 }
 
 FilterWidget::~FilterWidget()
@@ -141,7 +144,7 @@ void FilterWidget::boxItemSelectionChanged ()
     else
     {
         includeButton->setEnabled(true);
-        excludeButton->setEnabled(false);
+        excludeButton->setEnabled(true);
         removeButton->setEnabled(false);
         regLine->clear();
     }
@@ -268,7 +271,7 @@ void FilterWidget::exclude()
     }
     for (int i=0;i<hostgroupBox->selectedItems().size();i++)
     {
-        filterBox->addItem(QString("host_groups != " + hostgroupBox->selectedItems().at(i)->text()));
+        filterBox->addItem(QString("host_groups !>= " + hostgroupBox->selectedItems().at(i)->text()));
     }
     if (!regLine->text().isEmpty())
     {
@@ -306,3 +309,15 @@ void FilterWidget::remove()
     boxItemSelectionChanged ();
 }
 
+void FilterWidget::setNewFilter(QStringList sList, QStringList hList, QStringList hgList)
+{
+    serviceBox->clear();
+    serviceBox->addItems(sList);
+
+    hostBox->clear();
+    hostBox->addItems(hList);
+
+    hostgroupBox->clear();
+    hostgroupBox->addItems(hgList);
+
+}

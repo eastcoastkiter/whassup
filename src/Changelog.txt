@@ -1,0 +1,88 @@
+- 1.2
+New Features:
+    HostDetail Window with ParentChild Viewer
+    ServiceDetail Window with LogViewer
+    Filter Window in Config with host, service, hostgroup and regexp support
+    LogSearch Filter by hostname with completer
+    GenerationTab with ParentChild Viewer
+    Multiple Service Selection for Commands
+    Fast Cgi Communication
+    Blinking Systemtray on new Incident
+    Help Widget
+
+Changes:
+    QT 5.1 Support
+    JSON communication to livestatus
+    ConfigWidget Class rewrite
+    Tabs now changes by name, not number
+    Sending Commands over LiveSocket/FastCgi
+    Copy to clipboard on doubleClick of Host and Service Detail
+    Save ServiceTree sortOrder/Indicator
+    Sort last_change correct regardless of TimeFormat
+    New configDialog
+    Hostgroup rewritten
+    Command rewritten
+    Enable/Disable Service/Host Checks/Notifications from Detail View
+    Collect global messages in Statusbar
+
+New Classes:
+    hostinfowidget (Host Details)
+    pcdialog (Parent/Child Window)
+    pcscene (Parent/Child Window)
+    node (Parent/Child Window)
+    edge (Parent/Child Window)
+    genereationtree (Generation Tab)
+    livesocketrequest (Livesocket Communication; generate Requests)
+    livesocketcommand (Livesocket Communication; generate Commands)
+    serviceinfowidget (Service Details)
+    logview  (Service Details)
+    logviewitem (Service Details)
+    configwidget (Config Tab)
+    resultlabel (Host/Service Detail; copy Label text on Doubleclick)
+    livesocketssl (SSL Communication with LiveSocket)
+    webcommunication (Fast Cgi Communication with LiveSocket)
+    Statusbar (MainWindow)
+
+ToDo:
+    Authentication against ssl server (threaded)
+    Show ssl errors (in CA)
+    Rewrite of inventory (most ugly)
+    Sort filter items ignore case
+    Show livesocketcommand errors (partial: No Feedback from Livestatus)
+    State unknown better icon
+    Show active checks disabled etc in detail widget
+    Request host/hostgroup/services after open FilterWidget (not on config tab)
+
+
+ToDo Features:
+    Add FCGI Support over SSL
+    Statusbar/message history
+    Show service/host commandline
+    Translate file for language support
+    New Icons
+    Add force to generation (ForceAtlas2 and maybe reingold fruchtermann)
+    Add a dircet livestatus Request tool
+    Add contacts Widget
+    Hide Tabs
+    Load initial config form webserver (commandline option)
+
+ToDo Doku
+    config widget
+    setWhatsthis
+
+Bugs
+    don't whassup->setRect from savefile, if out of display Rect
+        - done (QDesktopWidget().availableGeometry();)
+    Crash, if URL don't work?
+        - still not reconstructed
+    Downtime Icon
+        - done downtime || downtime depth > 0 (not &&)
+
+Disabled:
+    Livesocket Communication over SSL (currently IO:Socket:SSL is still not thread safe)
+    SSL Communication to LiveSocket (requires whassup_server_ssl.pl)
+    Command sending over commang.cgi (hard to support, not nessesary with other auth)
+
+
+
+

@@ -14,6 +14,7 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QUrl>
+#include <QUrlQuery>
 #include <QNetworkRequest>
 #include <QByteArray>
 #include <QNetworkReply>
@@ -22,19 +23,21 @@
 #include <QSpinBox>
 #include <QCheckBox>
 #include <QPixmap>
-#include <QMessageBox>
+#include <QSlider>
+#include <QJsonArray>
+#include <QTreeWidgetItem>
+#include <QVariant>
+#include <QSettings>
 
 #include "icons.h"
-
-#define CMD_ACKNOWLEDGE_SVC_PROBLEM "34"
-#define CMD_SCHEDULE_SVC_DOWNTIME "56"
-#define CMD_SCHEDULE_SVC_CHECK "7"
-#define CMD_SCHEDULE_HOST_SVC_DOWNTIME "86"
+#include "commandwidget.h"
+#include "globals.h"
+#include "servicetreeitem.h"
 
 class ServiceTree: public QTreeWidget
 {
-	Q_OBJECT
-	
+    Q_OBJECT
+
 public:
     ServiceTree(QWidget * parent = 0);
     ~ServiceTree();
@@ -43,37 +46,38 @@ private:
     QString storUsername;
     QString storPassword;
     QTreeWidgetItem * lastRightClickedItem;
-    QString nagioshostname;
-    int timezone;
-    QNetworkReply * reply;
-    QWidget* menuWidget;
+    QString hostname;
     QString lastCmdTyp;
-        QLineEdit* ackHostname;
-        QLineEdit* ackService;
-        QLineEdit* ackAuthor;
-        QLineEdit* ackComment;
-        QLineEdit* ackPassword;
-        QLineEdit* ackDuration;
-        QDateTimeEdit* ackStart;
-        QSpinBox* ackMinuteDuration;
-        QSpinBox* ackHourDuration;
-        QCheckBox* ackAllServices;
-        Qt::SortOrder dateSortOrder;
-
-
+    QList<QStringList> selectedServices;
+    QStringList lastServices;
+    QStringList currentServices;
+    bool foundIncidents;
+    int sortOrder;
+    int sortIndicator;
 private slots:
     void showServicePopup(const QPoint &);
     void menuRightSlot(bool);
-    void ackSubmitSlot();
-    void sendNagiosHttp(QNetworkRequest, QByteArray);
-         void slotReadyReadHttp();
-         void customSortByColumn(int);
+    void compareIncidents(QString, QString);
+    void sortIndicatorChanged(int,Qt::SortOrder);
 public slots:
-    void setNagiosHostname(QString h) {nagioshostname=h;}
-    void setTimezone(int t) {timezone=t;}
+    void setHostname(QString h) {hostname=h;}
     void setHiddenColumns(int);
+    void gotServiceDataJson(QJsonArray);
+    void receivedStatusBar(QString message, int status){ emit setStatusBar(message, status); }
+    void writeSettings(QSettings*);
+    void loadSettings(QSettings*);
+    void clearTree(){ lastServices.clear(); clear(); }
+    void slotSendLiveStatusData(QString a, QString b){ emit sendLiveStatusData(a,b); }
 signals:
-    void setStatusBar(QString);
+    void setStatusBar(QString, int);
+    void signalLogSearch(QString);
+    void signalHostDetail(QString);
+    void signalServiceDetail(QString, QString);
+    void sendLiveStatusData(QString, QString);
+    void signalSetTraySystemIcon(int);
+    void changeTimer(bool);
+    void foundIncident();
 };
 #endif
+
 

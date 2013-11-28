@@ -1,0 +1,54 @@
+<!--Title: Service Detail-->
+<!--Tag: Service-->
+<!--Parent: Service-->
+<!--Sort: 2-->
+<!--EndOfHead-->
+<html>
+<head>
+<META http-equiv=Content-Type content="text/html; charset=UTF-8">
+<title>ServiceWidget</title>
+<style type="text/css">
+span {
+	font-family: 'Courier New';
+        font-size: 9pt;
+	color: #000000;
+}
+.sc0 {
+}
+</style>
+</head>
+<body>
+<b>Service Detail:</b><BR>
+<BR>
+The service detail view is an additional view<BR>
+<BR>
+<BR>
+Service Detail View shows some common service information.<BR>
+<BR>
+It also shows you the last incidents from the log file.<BR>
+Change Log line limit to view longer time range.<BR>
+<BR>
+Double Click on the incident view selects the nearest log entry for you.<BR>
+Log entries are collapsed by state change.<BR>
+<BR>
+- Open in Browser<BR>
+Opens this service in the browser, the url will be build from the<BR>
+CGI path you configured in "Server Config". Whassup will append to<BR>
+this cgi path an additional<BR>
+"extinfo.cgi?type=2&host=Hostname&service=Description"<BR>
+<BR>
+This should be fine for many monitoring system, if this does not<BR>
+suite your requirements, please do not hesitate to contact me.<BR>
+Alternativ you could take a look into mod_rewrite or<BR>
+html meta refresh/redirection, if you like to use this information<BR>
+in other parts.<BR>
+<BR>
+Open Action URL and Notes Url will open your default browser and load<BR>
+the full action/notes URl configured in your monitoring server.<BR>
+<BR>
+<BR>
+<img src="qrc:/helpfiles/servicedetail.png">
+
+
+</body>
+</html>

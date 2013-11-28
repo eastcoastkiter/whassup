@@ -1,0 +1,13 @@
+INPUT(
+./debug\application.o
+./debug\helpwidget.o
+./debug\livesocket.o
+./debug\servicetree.o
+./debug\infoWidget.o
+./debug\main.o
+./debug\moc_application.o
+./debug\moc_servicetree.o
+./debug\moc_livesocket.o
+./debug\moc_helpwidget.o
+./debug\moc_infoWidget.o
+);

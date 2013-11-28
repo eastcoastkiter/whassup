@@ -1,0 +1,113 @@
+Howto install whassup
+
+- 0) Prerequisite
+- 1) Setting up the server
+    a) whassup server
+    b) whassup fcgi server
+    c) xinetd
+- 2) Getting Whassup running
+- 3) Compiling from source
+
+#############################################################################################
+
+- 0) Prerequisite
+    You need a monitoring system based on n@gios.
+    You need a runing livestatus socket. (checkout http://mathias-kettner.de/checkmk_livestatus.html)
+
+#############################################################################################
+
+- 1)    If you want to try out whassup, xinetd or whassup_server.pl are fast and simple ways to do so.
+        But again be reminded, that it is really unsecure to distribute all your monitoring data
+        to the network without any authentication. If you like whassup, you should consider to switch to fast cgi.
+
+ a) Whassup server (unsecure)
+    Whassup server is a tcp forwarder for livestatus.
+    It transfers any tcp request/answer from and to livestatus without any changes.
+    It works like the xinetd configuration.
+    Just edit the whassup_server.pl and change to your current livestatus socket file.
+    You will need perl and IO::Socket; IO::Socket::UNIX; support.
+
+#############################################
+
+ b) whassup.fcgi (recommended)
+    You will need a running apache webserver and add fcgi support.
+
+    Please take a look at the fcgid_module at http://httpd.apache.org
+    In short:
+    httpd.conf:LoadModule fcgid_module /usr/lib64/httpd/modules/mod_fcgid.so
+    httpd.conf:AddType application/x-httpd-fcgi .fcgi
+
+    add whassup.conf to your apache configuration folder:
+
+    Alias /whassup /usr/local/whassup
+    <Directory /usr/local/whassup>
+        SetHandler fcgid-script
+        Options +ExecCGI
+        Order allow,deny
+        Allow from all
+        AuthName "Monitoring Access"
+        AuthType Basic
+       AuthUserFile /usr/local/nagios/etc/htpasswd.users
+       Require valid-user
+    </Directory>
+
+    Insert something like this for LDAP (here AD controller) support:
+          AuthBasicProvider ldap file
+          AuthzLDAPAuthoritative Off
+          AuthLDAPURL "ldap://ldap.local:389/OU=Benutzer,dc=company,dc=local?sAMAccountName?sub?(memberOf=monitoringAdmins,OU=Gruppen,DC=company,DC=local)"
+          AuthLDAPBindDN "CN=lpaduser,DC=company,DC=local"
+          AuthLDAPBindPassword "ldappasswd"
+          AuthzLDAPLogLevel error
+
+    Copy whassup.fcgi to /usr/local/whassup and chown it to apache.
+    You will have to change the livestatus socket location in the fcgi script.
+    After restarting the httpd server, you should be able to run.
+
+    Whassup is tested against SSL Webserver with whassup.fcgi; any Certificate error
+    will be ignored, but shown in the Statusbar (e.g. Self-Signed Certificate Errors).
+    Nevertheless the communication will be encrypted.
+
+
+    Remark: Whassup is recognizing http error pages, if connection fails, such as authentication etc.
+    Please be sure, that valid apache error codes in the document title will be used.
+        For example: "<title>401 Authorization Required</title>"
+                    ("<title>\\s*\\d{3}.*</title>",Qt::CaseInsensitive, QRegExp::RegExp);
+
+
+#############################################
+
+ c) xinetd (unsecure)
+    For xinetd please look into the livestatus documentation; it's exactly what whassup_server.pl does.
+    Please note: livestatus over xinetd is unsecure.
+
+#############################################################################################
+
+- 2) Getting Whassup running
+    Just execute the Whassup.exe. Whassup will try to save a configuration file to
+    "%APPDATA%Monitoring/whassup/whassup.ini" which should be something like:
+    C:/Users/%USERNAME%/AppData/Local/Monitoring/whassup/whassup.ini
+    Whassup has to be configured in the Configure Tab and Server Config Dialog.
+    Please take a look into "?"->"help" after starting whassup.
+
+    Whassup is static complied with mingw-win32, so you do not need any other libraries.
+    Please look at your whassup download source to check the md5sum.
+
+    If you want to run whassup under Linux, please compile from source.
+
+#############################################################################################
+
+- 3) Compiling from source
+    To compile Whassup from source, you will have to download qt.
+    Whassup is written in QT 5.1, but should compile with any QT Version above Version 5.
+    Please download qt at http://qt-project.org/ and install with mingw support on Win(tested).
+    Any other compiler supported by qt should work too.
+    Please provide openssl headers, you can download them at http://www.openssl.org/
+    After that: qmake, make (make-mingw32) should do the job.
+    I recommend to import the project to you qcreator.
+
+    Whassup is also compiled and tested on Linux (CentOS 6).
+
+
+
+
+
